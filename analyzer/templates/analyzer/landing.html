@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LinkGuard — Security Operations Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:            #060810;
+      --surface:       rgba(10, 14, 28, 0.75);
+      --border:        rgba(0, 240, 255, 0.12);
+      --border-hi:     rgba(0, 240, 255, 0.35);
+      --text:          #dde4f0;
+      --muted:         #6b7799;
+      --cyan:          #00f0ff;
+      --cyan-dim:      rgba(0, 240, 255, 0.08);
+      --violet:        #7c3aed;
+      --violet-dim:    rgba(124, 58, 237, 0.12);
+      --amber:         #f59e0b;
+      --green:         #10b981;
+      --red:           #ef4444;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Particle canvas ── */
+    #particleCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    /* ── Dot grid ── */
+    .dot-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 1px 1px, rgba(0, 240, 255, 0.045) 1px, transparent 0);
+      background-size: 28px 28px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── Ambient orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(130px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.13;
+    }
+    .orb-1 { width: 600px; height: 600px; background: var(--cyan); top: -15%; left: -12%; animation: drift1 18s ease-in-out infinite alternate; }
+    .orb-2 { width: 500px; height: 500px; background: var(--violet); bottom: -15%; right: -10%; animation: drift2 22s ease-in-out infinite alternate; }
+    .orb-3 { width: 300px; height: 300px; background: var(--amber); top: 40%; left: 40%; opacity: 0.05; animation: drift3 14s ease-in-out infinite alternate; }
+
+    @keyframes drift1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(50px, 40px) scale(1.15); } }
+    @keyframes drift2 { from { transform: translate(0, 0); } to { transform: translate(-40px, -50px) scale(1.1); } }
+    @keyframes drift3 { from { transform: translate(0, 0); } to { transform: translate(60px, -30px); } }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #060810; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,240,255,0.18); border-radius: 3px; }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1.1rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      background: rgba(6, 8, 16, 0.6);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.2rem;
+      letter-spacing: 0.5px;
+      color: #fff;
+      text-decoration: none;
+    }
+    .logo-hex {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, var(--cyan), var(--violet));
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .logo-name { letter-spacing: 1px; }
+    .logo-ver {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--muted);
+      align-self: flex-end;
+      margin-bottom: 2px;
+    }
+
+    nav { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-link {
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .nav-link:hover { color: var(--cyan); }
+    .nav-cta {
+      background: rgba(0, 240, 255, 0.06);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      color: var(--cyan);
+      padding: 8px 22px;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s;
+      letter-spacing: 0.5px;
+    }
+    .nav-cta:hover {
+      background: var(--cyan);
+      color: #000;
+      box-shadow: 0 0 20px rgba(0,240,255,0.25);
+    }
+
+    /* ── Sections ── */
+    section { position: relative; z-index: 1; }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 6rem 2rem 5rem;
+      display: grid;
+      grid-template-columns: 1fr 1.05fr;
+      gap: 4.5rem;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; padding-top: 3.5rem; text-align: center; }
+    }
+
+    .hero-left { display: flex; flex-direction: column; gap: 1.75rem; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-self: flex-start;
+      align-items: center;
+      gap: 8px;
+      background: var(--cyan-dim);
+      border: 1px solid rgba(0,240,255,0.18);
+      color: var(--cyan);
+      padding: 5px 14px;
+      font-size: 0.72rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .eyebrow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,240,255,0.6); }
+      50% { opacity: 0.6; box-shadow: 0 0 0 5px rgba(0,240,255,0); }
+    }
+    @media (max-width: 900px) { .eyebrow { align-self: center; } }
+
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 3.75rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    h1 .gradient-text {
+      background: linear-gradient(125deg, var(--cyan) 0%, var(--violet) 60%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: 1.05rem;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 480px;
+    }
+    @media (max-width: 900px) { .hero-desc { max-width: 100%; } }
+
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    @media (max-width: 900px) { .hero-actions { justify-content: center; } }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--cyan) 0%, #2563eb 100%);
+      color: #000;
+      border: none;
+      padding: 14px 30px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .btn-primary:hover { box-shadow: 0 0 30px rgba(0,240,255,0.3), 0 4px 20px rgba(37,99,235,0.3); transform: translateY(-1px); }
+    .btn-primary:hover::after { opacity: 1; }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text);
+      padding: 14px 24px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.25s;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.3); color: #fff; background: rgba(255,255,255,0.04); }
+
+    /* ── Stats bar ── */
+    .stats-row {
+      display: flex;
+      gap: 2rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    @media (max-width: 900px) { .stats-row { justify-content: center; } }
+    .stat { display: flex; flex-direction: column; gap: 2px; }
+    .stat-val { font-size: 1.5rem; font-weight: 700; color: #fff; font-family: 'JetBrains Mono', monospace; }
+    .stat-val span { color: var(--cyan); }
+    .stat-lbl { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── Terminal mock ── */
+    .terminal-wrap {
+      position: relative;
+    }
+    .terminal-glow {
+      position: absolute;
+      inset: -20px;
+      background: radial-gradient(ellipse at 50% 50%, rgba(0,240,255,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      border-radius: 50%;
+    }
+    .terminal {
+      background: #05070f;
+      border: 1px solid rgba(0,240,255,0.2);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(0,240,255,0.04);
+      position: relative;
+    }
+    /* CRT scanline pulse — the signature effect */
+    .terminal::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: linear-gradient(to bottom, transparent 0%, rgba(0,240,255,0.04) 50%, transparent 100%);
+      animation: scanline 5s linear infinite;
+      pointer-events: none;
+      z-index: 5;
+    }
+    @keyframes scanline {
+      0% { top: -80px; }
+      100% { top: calc(100% + 80px); }
+    }
+
+    .term-bar {
+      background: #0b0f1f;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(0,240,255,0.07);
+    }
+    .term-dots { display: flex; gap: 6px; }
+    .term-dots span {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .d-r { background: #ef4444; }
+    .d-y { background: #eab308; }
+    .d-g { background: #22c55e; }
+    .term-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .term-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+    }
+    .status-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+
+    .term-body {
+      padding: 20px;
+      min-height: 300px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: #8892b0;
+      overflow: hidden;
+    }
+    .term-prompt { color: var(--cyan); margin-bottom: 8px; }
+    .t-line { margin-bottom: 2px; opacity: 0; transform: translateY(4px); transition: opacity 0.3s, transform 0.3s; }
+    .t-line.visible { opacity: 1; transform: none; }
+
+    .tc-cyan    { color: var(--cyan); }
+    .tc-violet  { color: #a78bfa; }
+    .tc-green   { color: var(--green); }
+    .tc-amber   { color: var(--amber); }
+    .tc-red     { color: var(--red); }
+    .tc-pink    { color: #ec4899; }
+    .tc-blue    { color: #60a5fa; }
+    .tc-muted   { color: #4b5b7b; }
+
+    .t-cursor {
+      display: inline-block;
+      width: 7px;
+      height: 13px;
+      background: var(--cyan);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+
+    /* ── Divider ── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(0,240,255,0.15), transparent);
+      margin: 0 auto;
+      max-width: 1140px;
+    }
+
+    /* ── Trust badges ── */
+    .trust-section {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .trust-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .trust-badges { display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .trust-badge {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+    .trust-badge:hover { border-color: rgba(0,240,255,0.2); color: var(--text); }
+    .trust-badge span { font-size: 1rem; }
+
+    /* ── Features ── */
+    .features-section {
+      max-width: 1140px;
+      margin: 4rem auto;
+      padding: 0 2rem;
+    }
+    .section-header { text-align: center; margin-bottom: 3.5rem; }
+    .section-eyebrow {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    h2 { font-size: clamp(1.6rem, 3vw, 2.5rem); font-weight: 700; color: #fff; }
+    .section-desc { font-size: 1rem; color: var(--muted); margin-top: 0.75rem; line-height: 1.6; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+    @media (max-width: 860px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .features-grid { grid-template-columns: 1fr; } }
+
+    .feat-card {
+      background: rgba(10, 14, 28, 0.6);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      cursor: default;
+      transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .feat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(to right, transparent, rgba(0,240,255,0.04), transparent);
+      transition: left 0.5s ease;
+    }
+    .feat-card:hover { border-color: rgba(0,240,255,0.18); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+    .feat-card:hover::before { left: 150%; }
+
+    .feat-icon-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: var(--cyan-dim);
+      border: 1px solid rgba(0,240,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      margin-bottom: 1.25rem;
+      transition: all 0.3s;
+    }
+    .feat-card:hover .feat-icon-wrap {
+      background: rgba(0,240,255,0.12);
+      box-shadow: 0 0 20px rgba(0,240,255,0.1);
+    }
+    .feat-title { font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 0.6rem; }
+    .feat-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+    .feat-tag {
+      display: inline-block;
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--cyan);
+      background: var(--cyan-dim);
+      border: 1px solid rgba(0,240,255,0.15);
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: all 0.3s 0.1s;
+    }
+    .feat-card:hover .feat-tag { opacity: 1; transform: none; }
+
+    /* ── How it works ── */
+    .how-section {
+      max-width: 1140px;
+      margin: 5rem auto;
+      padding: 0 2rem;
+    }
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      position: relative;
+    }
+    @media (max-width: 720px) { .how-grid { grid-template-columns: 1fr; } }
+
+    .how-grid::before {
+      content: '';
+      position: absolute;
+      top: 36px;
+      left: 16.6%;
+      right: 16.6%;
+      height: 1px;
+      background: linear-gradient(to right, rgba(0,240,255,0.3), rgba(124,58,237,0.3));
+    }
+    @media (max-width: 720px) { .how-grid::before { display: none; } }
+
+    .how-step { text-align: center; padding: 0 2rem; }
+    .how-num {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,240,255,0.25);
+      background: rgba(0,240,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--cyan);
+      margin: 0 auto 1.5rem;
+      position: relative;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+    .how-step:hover .how-num { background: rgba(0,240,255,0.1); box-shadow: 0 0 25px rgba(0,240,255,0.15); }
+    .how-step h3 { font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 0.6rem; }
+    .how-step p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── CTA Banner ── */
+    .cta-section {
+      max-width: 1140px;
+      margin: 4rem auto 5rem;
+      padding: 0 2rem;
+    }
+    .cta-card {
+      background: linear-gradient(135deg, rgba(0,240,255,0.05) 0%, rgba(124,58,237,0.08) 100%);
+      border: 1px solid rgba(0,240,255,0.15);
+      border-radius: 16px;
+      padding: 4rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--violet), var(--cyan), var(--violet));
+      background-size: 200% 100%;
+      animation: gradient-move 4s linear infinite;
+    }
+    @keyframes gradient-move {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+    .cta-card h2 { font-size: 2rem; font-weight: 700; color: #fff; margin-bottom: 1rem; }
+    .cta-card p { font-size: 1rem; color: var(--muted); margin-bottom: 2rem; line-height: 1.6; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid rgba(255,255,255,0.04);
+      padding: 1.75rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+    }
+    .footer-logo { display: flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; }
+    .footer-right { display: flex; align-items: center; gap: 6px; }
+    .footer-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: pulse-dot 2s ease-in-out infinite; }
+
+    /* ── Scroll reveal ── */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal.revealed { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+  </style>
+</head>
+<body>
+
+  <canvas id="particleCanvas"></canvas>
+  <div class="dot-grid"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <header>
+    <a href="/" class="logo">
+      <div class="logo-hex">LG</div>
+      <span class="logo-name">LinkGuard</span>
+      <span class="logo-ver">v2.5</span>
+    </a>
+    <nav>
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#how" class="nav-link">How It Works</a>
+      <a href="/analyze/" class="nav-cta">Open Terminal →</a>
+    </nav>
+  </header>
+
+  <section>
+    <div class="hero">
+      <!-- Left: Copy -->
+      <div class="hero-left">
+        <div class="eyebrow"><span class="eyebrow-dot"></span>Real-Time Threat Intelligence</div>
+        <h1>Inspect Any URL for<br><span class="gradient-text">Phishing & Exploits</span></h1>
+        <p class="hero-desc">LinkGuard deploys multi-layered security diagnostics: certificate handshakes, DNS spoofing analysis, typosquatting detection, and live HTML forensics — all in seconds.</p>
+        <div class="hero-actions">
+          <a href="/analyze/" class="btn-primary">Enter SOC Terminal <span>→</span></a>
+          <a href="#features" class="btn-ghost">See Capabilities</a>
+        </div>
+        <div class="stats-row">
+          <div class="stat">
+            <div class="stat-val"><span class="counter" data-target="12">0</span>+</div>
+            <div class="stat-lbl">Detection Vectors</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val"><span class="counter" data-target="99">0</span>%</div>
+            <div class="stat-lbl">Uptime</div>
+          </div>
+          <div class="stat">
+            <div class="stat-val">&lt;<span class="counter" data-target="5">0</span>s</div>
+            <div class="stat-lbl">Avg Scan Time</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Terminal Mock -->
+      <div class="terminal-wrap">
+        <div class="terminal-glow"></div>
+        <div class="terminal">
+          <div class="term-bar">
+            <div class="term-dots">
+              <span class="d-r"></span>
+              <span class="d-y"></span>
+              <span class="d-g"></span>
+            </div>
+            <div class="term-label">SOC Scan Processor</div>
+            <div class="term-status">
+              <div class="status-pulse"></div>
+              LIVE
+            </div>
+          </div>
+          <div class="term-body" id="mockTerm">
+            <div class="term-prompt">$ linkguard --scan paypa1-secure-verify.cf</div>
+            <div id="termLines"></div>
+            <span class="t-cursor"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section>
+    <div class="trust-section">
+      <span class="trust-label">Detection Coverage</span>
+      <div class="trust-badges">
+        <div class="trust-badge"><span>🔒</span> SSL/TLS</div>
+        <div class="trust-badge"><span>📬</span> DNS & DMARC</div>
+        <div class="trust-badge"><span>🎣</span> Phishing Heuristics</div>
+        <div class="trust-badge"><span>🌐</span> WHOIS Registry</div>
+        <div class="trust-badge"><span>🛡️</span> Security Headers</div>
+        <div class="trust-badge"><span>🔄</span> Redirect Tracing</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="features-section" id="features">
+    <div class="section-header reveal">
+      <div class="section-eyebrow">Inspection Matrix</div>
+      <h2>Six Layers of Security Analysis</h2>
+      <p class="section-desc">Every URL is evaluated across a comprehensive diagnostics stack, from network-level signals to client-side HTML forensics.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-icon-wrap">🎣</div>
+        <div class="feat-title">Phishing Forensics</div>
+        <p class="feat-desc">Checks domain entropy (DGA detection), Levenshtein typosquatting distances on 30+ trusted brands, IDN homograph attacks, and suspicious free TLDs.</p>
+        <div class="feat-tag">Heuristics Engine</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-icon-wrap">🔒</div>
+        <div class="feat-title">SSL/TLS Cipher Profile</div>
+        <p class="feat-desc">Inspects TLS protocol version, negotiated cipher suites, CA issuer organizations, and days until certificate expiration.</p>
+        <div class="feat-tag">Cryptographic Layer</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-3">
+        <div class="feat-icon-wrap">📬</div>
+        <div class="feat-title">DNS & Anti-Spoofing</div>
+        <p class="feat-desc">Evaluates MX records, SPF permissiveness (+all flags), DMARC policy enforcement levels, and DNSSEC key signing.</p>
+        <div class="feat-tag">DNS Layer</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-1">
+        <div class="feat-icon-wrap">🕵️</div>
+        <div class="feat-title">HTML Evasion Heuristics</div>
+        <p class="feat-desc">Flags obfuscated JavaScript, credential-leak forms submitting to foreign domains, and brand title impersonation on unofficial hosts.</p>
+        <div class="feat-tag">Content Analysis</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-2">
+        <div class="feat-icon-wrap">🛡️</div>
+        <div class="feat-title">Security Response Headers</div>
+        <p class="feat-desc">Grades site hardening based on CSP, HSTS, X-Frame-Options, and X-Content-Type-Options header presence and configuration.</p>
+        <div class="feat-tag">Header Audit</div>
+      </div>
+      <div class="feat-card reveal reveal-delay-3">
+        <div class="feat-icon-wrap">🔄</div>
+        <div class="feat-title">HTTP Redirect Node Map</div>
+        <p class="feat-desc">Follows every redirect hop, maps multi-domain chains, and exposes final landing targets behind URL shorteners.</p>
+        <div class="feat-tag">Network Trace</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how-section" id="how">
+    <div class="section-header reveal">
+      <div class="section-eyebrow">Scan Workflow</div>
+      <h2>How a Scan Works</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-step reveal reveal-delay-1">
+        <div class="how-num">01</div>
+        <h3>Submit URL</h3>
+        <p>Paste any HTTP or HTTPS link into the SOC terminal input. No account required.</p>
+      </div>
+      <div class="how-step reveal reveal-delay-2">
+        <div class="how-num">02</div>
+        <h3>Live Diagnostics</h3>
+        <p>Watch real-time logs stream in as 6 parallel checks run: DNS, SSL, IP reputation, WHOIS, HTML, and phishing heuristics.</p>
+      </div>
+      <div class="how-step reveal reveal-delay-3">
+        <div class="how-num">03</div>
+        <h3>Risk Report</h3>
+        <p>Receive a 0–100 risk index, verdict badge, and expandable accordion report with all diagnostic findings.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <div class="cta-card reveal">
+      <h2>Ready to Inspect a Link?</h2>
+      <p>Enter a URL into the Security Operations Center and get a full threat assessment in under 5 seconds.</p>
+      <a href="/analyze/" class="btn-primary" style="display:inline-flex;">Enter SOC Terminal <span>→</span></a>
+    </div>
+  </section>
+
+  <footer>
+    <a href="/" class="footer-logo">
+      <div class="logo-hex" style="width:22px; height:22px; font-size:9px;">LG</div>
+      LinkGuard Operations
+    </a>
+    <div class="footer-right">
+      <div class="footer-dot"></div>
+      System Operational
+    </div>
+    <div>© 2026 — Authorized Access Only</div>
+  </footer>
+
+  <script>
+    /* ── Particle Network ── */
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const COUNT = 55;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', () => { resize(); initParticles(); });
+
+    function initParticles() {
+      particles = Array.from({ length: COUNT }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 1.5 + 0.5,
+      }));
+    }
+    initParticles();
+
+    function drawParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.35)';
+        ctx.fill();
+      });
+
+      // Draw connecting lines
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 130) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(0, 240, 255, ${0.08 * (1 - dist / 130)})`;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(drawParticles);
+    }
+    drawParticles();
+
+    /* ── Mock Terminal Typewriter ── */
+    const LOGS = [
+      { cls: 'tc-cyan',   text: '[INIT] Resolving hostname... paypa1-secure-verify.cf' },
+      { cls: 'tc-violet', text: '[DNS]  MX records: 0  SPF: missing  DMARC: none' },
+      { cls: 'tc-blue',   text: '[IP]   185.220.101.44 — Tor exit node range detected' },
+      { cls: 'tc-amber',  text: '[SSL]  Let\'s Encrypt / Valid 6 days — expiry imminent' },
+      { cls: 'tc-blue',   text: '[REACH] HTTP 302 → phishing-login.xyz (1 hop)' },
+      { cls: 'tc-pink',   text: '[PHISH] Typosquatting: paypa1 ≈ paypal (dist=1) ⚠' },
+      { cls: 'tc-pink',   text: '[PHISH] Contains brand keyword "paypal" on unofficial domain' },
+      { cls: 'tc-pink',   text: '[HTML] Password form submits to external host: login.xyz' },
+      { cls: 'tc-muted',  text: '───────────────────────────────────────────────' },
+      { cls: 'tc-red',    text: '[RESULT] RISK INDEX: 87/100  ██  VERDICT: DANGEROUS' },
+    ];
+
+    let logIdx = 0;
+    const termLines = document.getElementById('termLines');
+
+    function appendLine() {
+      if (logIdx >= LOGS.length) {
+        setTimeout(() => {
+          termLines.innerHTML = '';
+          logIdx = 0;
+          setTimeout(appendLine, 1000);
+        }, 5000);
+        return;
+      }
+      const log = LOGS[logIdx++];
+      const div = document.createElement('div');
+      div.className = `t-line ${log.cls}`;
+      div.textContent = log.text;
+      termLines.appendChild(div);
+      requestAnimationFrame(() => { requestAnimationFrame(() => { div.classList.add('visible'); }); });
+      setTimeout(appendLine, 1000 + Math.random() * 400);
+    }
+    setTimeout(appendLine, 1200);
+
+    /* ── Stat Counters ── */
+    function animateCounter(el) {
+      const target = parseInt(el.dataset.target, 10);
+      let current = 0;
+      const step = Math.ceil(target / 30);
+      const interval = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = current;
+        if (current >= target) clearInterval(interval);
+      }, 40);
+    }
+
+    /* ── Scroll Reveal ── */
+    const revealEls = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('revealed');
+          // Fire counters when hero stats come into view
+          entry.target.querySelectorAll('.counter').forEach(animateCounter);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    revealEls.forEach(el => observer.observe(el));
+
+    // Also trigger counters when hero is visible immediately
+    document.querySelectorAll('.hero .counter').forEach(el => {
+      const io = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) { animateCounter(el); io.disconnect(); }
+      }, { threshold: 0.5 });
+      io.observe(el);
+    });
+  </script>
+</body>
+</html>
