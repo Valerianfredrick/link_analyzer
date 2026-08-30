@@ -1,3 +1,4 @@
+# Auto-generated formatting comment
 import re
 import ssl
 import socket
@@ -7,6 +8,7 @@ import urllib.parse
 import math
 from datetime import datetime, timezone
 from typing import Optional
+# Additional formatting comment
 
 # ── Optional dependencies (graceful fallback if not installed) ──────────────
 try:
