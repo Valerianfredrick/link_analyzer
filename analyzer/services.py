@@ -9,6 +9,25 @@ import math
 from datetime import datetime, timezone
 from typing import Optional
 # Additional formatting comment
+import subprocess
+
+def get_pending_commits():
+    """Return list of local commit hashes not yet pushed to origin."""
+    try:
+        # Get current branch name
+        result = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True, check=True)
+        branch = result.stdout.strip()
+        # Get upstream branch
+        upstream_res = subprocess.run(['git', 'rev-parse', '--abbrev-ref', '--symbolic-full-name', f"{branch}@{{u}}"], capture_output=True, text=True)
+        if upstream_res.returncode != 0:
+            return []
+        upstream = upstream_res.stdout.strip()
+        # List commits not in upstream
+        log_res = subprocess.run(['git', 'log', '--oneline', f"{upstream}..HEAD"], capture_output=True, text=True, check=True)
+        commits = [line.strip() for line in log_res.stdout.strip().split('\n') if line]
+        return commits
+    except Exception:
+        return []
 
 # ── Optional dependencies (graceful fallback if not installed) ──────────────
 try:
