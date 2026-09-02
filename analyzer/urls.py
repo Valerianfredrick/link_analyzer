@@ -7,3 +7,5 @@ urlpatterns = [
     path('analyze/stream/', views.analyze_stream),
 ]
 
+
+

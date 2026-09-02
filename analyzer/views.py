@@ -16,6 +16,7 @@ def analyze(request):
         url = data.get('url', '')
         result = analyze_url(url)
         return JsonResponse(result)
+        
    
     return render(request, 'analyzer/index.html')
 
