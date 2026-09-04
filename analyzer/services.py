@@ -9,8 +9,6 @@ import math
 from datetime import datetime, timezone
 from typing import Optional
 # Additional formatting comment
-
-
 import subprocess
 
 def get_pending_commits():

@@ -17,7 +17,6 @@ def analyze(request):
         result = analyze_url(url)
         return JsonResponse(result)
         
-   
     return render(request, 'analyzer/index.html')
 
 @csrf_exempt
