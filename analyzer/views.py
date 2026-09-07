@@ -18,7 +18,6 @@ def analyze(request):
         return JsonResponse(result)
         
     return render(request, 'analyzer/index.html')
-
 @csrf_exempt
 def analyze_stream(request):
     if request.method == 'POST':

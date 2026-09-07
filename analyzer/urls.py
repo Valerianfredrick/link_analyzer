@@ -6,3 +6,5 @@ urlpatterns = [
     path('analyze/', views.analyze), 
     path('analyze/stream/', views.analyze_stream),
 ]
+
+
