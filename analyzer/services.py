@@ -104,8 +104,6 @@ SOCIAL_ENGINEERING_PHRASES = [
 URL_SHORTENERS = {
     "bit.ly", "tinyurl.com", "t.co", "ow.ly", "is.gd", "buff.ly", "adf.ly", "bit.do", "mcaf.ee", "su.pr"
 }
-
-
 # ── Heuristic Helpers ────────────────────────────────────────────────────────
 
 def _levenshtein_distance(s1: str, s2: str) -> int:
