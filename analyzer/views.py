@@ -7,6 +7,7 @@ import json
 def landing(request):
     return render(request, 'analyzer/landing.html')
 
+
 def analyze(request):
     if request.method == 'POST':
         try:
