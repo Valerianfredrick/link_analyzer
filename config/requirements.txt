@@ -2,4 +2,3 @@ django
 requests
 python-whois
 validators
-

@@ -39,4 +39,3 @@ def analyze_stream(request):
         return response
         
     return JsonResponse({"error": "Only POST is supported for streaming analysis"}, status=405)
-    

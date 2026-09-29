@@ -131,8 +131,6 @@ def _calculate_entropy(s: str) -> float:
     probabilities = [float(s.count(c)) / len(s) for c in set(s)]
     return -sum(p * math.log2(p) for p in probabilities)
 
-
-
 def _get_domain_parts(domain: str) -> tuple[str, str]:
     """Split domain into Second Level Domain (SLD) and Top Level Domain (TLD)."""
     parts = domain.split('.')
