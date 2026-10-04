@@ -136,7 +136,7 @@ def _get_domain_parts(domain: str) -> tuple[str, str]:
     parts = domain.split('.')
     if len(parts) < 2:
         return domain, ""
-    
+
     double_tlds = {"co", "com", "net", "org", "edu", "gov", "ac", "mil", "ltd"}
     if len(parts) >= 3 and parts[-2] in double_tlds:
         sld = parts[-3]
