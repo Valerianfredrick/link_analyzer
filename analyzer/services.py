@@ -146,7 +146,6 @@ def _get_domain_parts(domain: str) -> tuple[str, str]:
         tld = parts[-1]
     return sld, tld
 
-
 def _extract_domain(url: str) -> tuple[str, str]:
     """Return (full_url_with_scheme, bare_domain)."""
     url = url.strip()
