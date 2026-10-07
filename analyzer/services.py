@@ -174,6 +174,7 @@ def _check_ssl_advanced(hostname: str) -> dict:
         "cipher": "Unknown",
         "issue": None,
     }
+    
     try:
         ctx = ssl.create_default_context()
         ctx.verify_mode = ssl.CERT_REQUIRED
