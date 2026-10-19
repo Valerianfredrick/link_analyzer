@@ -174,7 +174,8 @@ def _check_ssl_advanced(hostname: str) -> dict:
         "cipher": "Unknown",
         "issue": None,
     }
-    
+
+
     
 
     try:
